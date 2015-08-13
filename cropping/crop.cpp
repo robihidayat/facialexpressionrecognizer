@@ -1,0 +1,215 @@
+/*
+ * Copyright (c) 2011. Philipp Wagner <bytefish[at]gmx[dot]de>.
+ * Released to public domain under terms of the BSD Simplified license.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *   * Neither the name of the organization nor the names of its contributors
+ *     may be used to endorse or promote products derived from this software
+ *     without specific prior written permission.
+ *
+
+
+
+ *   See <http://www.opensource.org/licenses/bsd-license>
+ */
+
+#include "opencv2/core/core.hpp"
+#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
+
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+// -lopencv_core -lopencv_objdetect -lopencv_highgui -lopencv_imgproc
+
+using namespace cv;
+using namespace std;
+
+
+    string face_cascade_name = "lbpcascade_frontalface.xml";
+    CascadeClassifier face_cascade;
+    string window_name = "Capture - Face detection";
+    int filenumber; // Number of file to be saved
+    string filename, filename1;
+
+    void detectAndDisplay(Mat frame);
+
+
+
+
+static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
+    std::ifstream file(filename.c_str(), ifstream::in);
+    if (!file) {
+        string error_message = "No valid input file was given, please check the given filename.";
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    string line, path, classlabel;
+    while (getline(file, line)) {
+        stringstream liness(line);
+        getline(liness, path, separator);
+        getline(liness, classlabel);
+        if(!path.empty() && !classlabel.empty()) {
+            images.push_back(imread(path, 1));
+            labels.push_back(atoi(classlabel.c_str()));
+        }
+    }
+}
+
+int main() {
+    
+  
+    string fn_csv = "dataset.csv"; //dataset
+    vector<Mat> images;
+    vector<int> labels;
+    
+    try {
+        read_csv(fn_csv, images, labels);
+	    } catch (cv::Exception& e) {
+	        cerr << "Error opening file \"" << fn_csv << "\". Reason: " << e.msg << endl;
+	        // nothing more we can do
+	        exit(1);
+	    }
+    // Quit if there are not enough images for this demo.
+	    if(images.size() <= 1) {
+	        string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
+	        CV_Error(CV_StsError, error_message);
+	    }
+   
+      
+   // int testLabel = labels[labels.size() - 1];
+
+    if (!face_cascade.load(face_cascade_name))
+	    {
+	        printf("--(!)Error loading\n");
+	        return (-1);
+	    };
+
+	   int k = images.size();
+	    
+     int i;
+
+     for (i=1; i<=k; i++)
+     {
+     	cout<<"data ke "<<i<<endl;
+     	Mat testSample = images[images.size() - i];
+        // Apply the classifier to the frame
+        if (!testSample.empty())
+        {
+            detectAndDisplay(testSample);
+        }
+         
+        waitKey(100);
+    }
+    
+    return 0;
+}
+
+
+// Function detectAndDisplay
+void detectAndDisplay(Mat frame)
+{
+    
+    std::vector<Rect> faces;
+    Mat frame_gray;
+    Mat crop;
+    Mat res;
+    Mat gray;
+    string text;
+    stringstream sstm,sstd;
+    Mat raisa;
+
+    cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
+    equalizeHist(frame_gray, frame_gray);
+
+    // Detect faces
+    face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+
+    // Set Region of Interest
+    cv::Rect roi_b;
+    cv::Rect roi_c;
+
+    size_t ic = 0; // ic is index of current element
+    int ac = 0; // ac is area of current element
+
+    size_t ib = 0; // ib is index of biggest element
+    int ab = 0; // ab is area of biggest element
+
+    for (ic = 0; ic < faces.size(); ic++) // Iterate through all current elements (detected faces)
+
+    {
+        roi_c.x = faces[ic].x;
+        roi_c.y = faces[ic].y;
+        roi_c.width = (faces[ic].width);
+        roi_c.height = (faces[ic].height);
+
+        ac = roi_c.width * roi_c.height; // Get the area of current element (detected face)
+
+        roi_b.x = faces[ib].x;
+        roi_b.y = faces[ib].y;
+        roi_b.width = (faces[ib].width);
+        roi_b.height = (faces[ib].height);
+
+        crop = frame(roi_b);
+        resize(crop, res, Size(128, 128), 1, 1, INTER_LINEAR); // This will be needed later while saving images
+        cvtColor(res, gray, CV_BGR2GRAY);
+
+        
+        // masking program 
+       
+
+        // Form a filename
+        filename = "//dataset/";
+        stringstream ssfn;
+        ssfn << filenumber << ".jpg";
+        filename = ssfn.str();
+        filenumber++;
+      //  cv::imwrite(filename,gray);
+
+        filename1 = "//dataset";
+        stringstream sstd;
+        sstd << filenumber << ".jpg";
+        filename1 = sstd.str();
+        filenumber++;
+       // cv::imwrite(filename1,raisa);
+
+       
+
+
+       
+        Point pt1(faces[ic].x, faces[ic].y); // Display detected faces on main window - live stream from camera
+        Point pt2((faces[ic].x + faces[ic].height), (faces[ic].y + faces[ic].width));
+        rectangle(frame, pt1, pt2, Scalar(0, 255, 0), 2, 8, 0);
+    }
+
+
+        Mat im2(gray.rows, gray.cols, CV_8UC1, Scalar(0,0,0));
+        ellipse( im2, Point( 64,64 ), Size( 50.0, 60.0 ), 0, 0, 360, Scalar( 255, 255, 255), -1, 8 );
+        bitwise_and(gray,im2,raisa); 
+
+
+    // Show image
+    sstm << "Crop area size: " << roi_b.width << "x" << roi_b.height << " Filename: " << filename;
+    text = sstm.str();
+
+
+    if (!crop.empty())
+    {
+        imshow("detected", crop);
+       imwrite(filename,raisa);
+    }
+    else
+        destroyWindow("detected");
+      //  imwrite(filename1,raisa);
+       // imwrite(filename, frame);
+
+}
