@@ -8,4 +8,8 @@ Studi Comparation Method for:
 
 Use Dataset JAFFE dan Self.
 
+# Preriquirement
 
+
+
+# How To Use
